@@ -1,25 +1,29 @@
 package handlers
 
 import (
-    "encoding/json"
     "net/http"
 
     "bookstore/models"
+    "github.com/gin-gonic/gin"
 )
 
 var Categories = []models.Category{}
 var CategoryID = 1
 
-func GetCategories(w http.ResponseWriter, r *http.Request) {
-    json.NewEncoder(w).Encode(Categories)
+func GetCategories(c *gin.Context) {
+    c.JSON(http.StatusOK, Categories)
 }
 
-func CreateCategory(w http.ResponseWriter, r *http.Request) {
+func CreateCategory(c *gin.Context) {
     var category models.Category
-    json.NewDecoder(r.Body).Decode(&category)
+
+    if err := c.ShouldBindJSON(&category); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
 
     if category.Name == "" {
-        http.Error(w, "Name required", http.StatusBadRequest)
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Name required"})
         return
     }
 
@@ -27,5 +31,7 @@ func CreateCategory(w http.ResponseWriter, r *http.Request) {
     CategoryID++
     Categories = append(Categories, category)
 
-    json.NewEncoder(w).Encode(category)
+    c.JSON(http.StatusCreated, category)
 }
+
+///go get -u github.com/gin-gonic/gin

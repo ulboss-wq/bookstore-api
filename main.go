@@ -1,49 +1,25 @@
 package main
 
 import (
-    "log"
-    "net/http"
-
     "bookstore/handlers"
+
+    "github.com/gin-gonic/gin"
 )
 
 func main() {
+    r := gin.Default()
 
-    http.HandleFunc("/books", func(w http.ResponseWriter, r *http.Request) {
-        if r.Method == http.MethodGet {
-            handlers.GetBooks(w, r)
-        } else if r.Method == http.MethodPost {
-            handlers.CreateBook(w, r)
-        }
-    })
+    r.GET("/books", handlers.GetBooks)
+    r.POST("/books", handlers.CreateBook)
+    r.GET("/books/:id", handlers.GetBookByID)
+    r.PUT("/books/:id", handlers.UpdateBook)
+    r.DELETE("/books/:id", handlers.DeleteBook)
 
-    http.HandleFunc("/books/", func(w http.ResponseWriter, r *http.Request) {
-        switch r.Method {
-        case http.MethodGet:
-            handlers.GetBookByID(w, r)
-        case http.MethodPut:
-            handlers.UpdateBook(w, r)
-        case http.MethodDelete:
-            handlers.DeleteBook(w, r)
-        }
-    })
+    r.GET("/authors", handlers.GetAuthors)
+    r.POST("/authors", handlers.CreateAuthor)
 
-    http.HandleFunc("/authors", func(w http.ResponseWriter, r *http.Request) {
-        if r.Method == http.MethodGet {
-            handlers.GetAuthors(w, r)
-        } else if r.Method == http.MethodPost {
-            handlers.CreateAuthor(w, r)
-        }
-    })
+    r.GET("/categories", handlers.GetCategories)
+    r.POST("/categories", handlers.CreateCategory)
 
-    http.HandleFunc("/categories", func(w http.ResponseWriter, r *http.Request) {
-        if r.Method == http.MethodGet {
-            handlers.GetCategories(w, r)
-        } else if r.Method == http.MethodPost {
-            handlers.CreateCategory(w, r)
-        }
-    })
-
-    log.Println("Server running on :8080")
-    http.ListenAndServe(":8080", nil)
+    r.Run(":8080")
 }

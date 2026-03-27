@@ -1,25 +1,29 @@
 package handlers
 
 import (
-    "encoding/json"
     "net/http"
 
     "bookstore/models"
+    "github.com/gin-gonic/gin"
 )
 
 var Authors = []models.Author{}
 var AuthorID = 1
 
-func GetAuthors(w http.ResponseWriter, r *http.Request) {
-    json.NewEncoder(w).Encode(Authors)
+func GetAuthors(c *gin.Context) {
+    c.JSON(http.StatusOK, Authors)
 }
 
-func CreateAuthor(w http.ResponseWriter, r *http.Request) {
+func CreateAuthor(c *gin.Context) {
     var author models.Author
-    json.NewDecoder(r.Body).Decode(&author)
+
+    if err := c.ShouldBindJSON(&author); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
 
     if author.Name == "" {
-        http.Error(w, "Name required", http.StatusBadRequest)
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Name required"})
         return
     }
 
@@ -27,5 +31,5 @@ func CreateAuthor(w http.ResponseWriter, r *http.Request) {
     AuthorID++
     Authors = append(Authors, author)
 
-    json.NewEncoder(w).Encode(author)
+    c.JSON(http.StatusCreated, author)
 }

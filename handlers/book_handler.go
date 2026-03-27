@@ -1,20 +1,20 @@
 package handlers
 
 import (
-    "encoding/json"
     "net/http"
     "strconv"
     "strings"
 
     "bookstore/models"
+    "github.com/gin-gonic/gin"
 )
 
 var Books = []models.Book{}
 var BookID = 1
 
-func GetBooks(w http.ResponseWriter, r *http.Request) {
-    category := r.URL.Query().Get("category")
-    pageStr := r.URL.Query().Get("page")
+func GetBooks(c *gin.Context) {
+    category := c.Query("category")
+    pageStr := c.Query("page")
 
     filtered := Books
 
@@ -39,8 +39,7 @@ func GetBooks(w http.ResponseWriter, r *http.Request) {
     limit := 5
 
     if pageStr != "" {
-        p, _ := strconv.Atoi(pageStr)
-        if p > 0 {
+        if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
             page = p
         }
     }
@@ -55,15 +54,19 @@ func GetBooks(w http.ResponseWriter, r *http.Request) {
         end = len(filtered)
     }
 
-    json.NewEncoder(w).Encode(filtered[start:end])
+    c.JSON(http.StatusOK, filtered[start:end])
 }
 
-func CreateBook(w http.ResponseWriter, r *http.Request) {
+func CreateBook(c *gin.Context) {
     var book models.Book
-    json.NewDecoder(r.Body).Decode(&book)
+
+    if err := c.ShouldBindJSON(&book); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
 
     if book.Title == "" || book.Price <= 0 {
-        http.Error(w, "Invalid data", http.StatusBadRequest)
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid data"})
         return
     }
 
@@ -71,53 +74,53 @@ func CreateBook(w http.ResponseWriter, r *http.Request) {
     BookID++
     Books = append(Books, book)
 
-    json.NewEncoder(w).Encode(book)
+    c.JSON(http.StatusCreated, book)
 }
 
-func GetBookByID(w http.ResponseWriter, r *http.Request) {
-    idStr := strings.TrimPrefix(r.URL.Path, "/books/")
-    id, _ := strconv.Atoi(idStr)
+func GetBookByID(c *gin.Context) {
+    id, _ := strconv.Atoi(c.Param("id"))
 
     for _, b := range Books {
         if b.ID == id {
-            json.NewEncoder(w).Encode(b)
+            c.JSON(http.StatusOK, b)
             return
         }
     }
 
-    http.NotFound(w, r)
+    c.JSON(http.StatusNotFound, gin.H{"error": "Book not found"})
 }
 
-func UpdateBook(w http.ResponseWriter, r *http.Request) {
-    idStr := strings.TrimPrefix(r.URL.Path, "/books/")
-    id, _ := strconv.Atoi(idStr)
+func UpdateBook(c *gin.Context) {
+    id, _ := strconv.Atoi(c.Param("id"))
 
     var updated models.Book
-    json.NewDecoder(r.Body).Decode(&updated)
+    if err := c.ShouldBindJSON(&updated); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
 
     for i, b := range Books {
         if b.ID == id {
             updated.ID = id
             Books[i] = updated
-            json.NewEncoder(w).Encode(updated)
+            c.JSON(http.StatusOK, updated)
             return
         }
     }
 
-    http.NotFound(w, r)
+    c.JSON(http.StatusNotFound, gin.H{"error": "Book not found"})
 }
 
-func DeleteBook(w http.ResponseWriter, r *http.Request) {
-    idStr := strings.TrimPrefix(r.URL.Path, "/books/")
-    id, _ := strconv.Atoi(idStr)
+func DeleteBook(c *gin.Context) {
+    id, _ := strconv.Atoi(c.Param("id"))
 
     for i, b := range Books {
         if b.ID == id {
             Books = append(Books[:i], Books[i+1:]...)
-            w.WriteHeader(http.StatusNoContent)
+            c.Status(http.StatusNoContent)
             return
         }
     }
 
-    http.NotFound(w, r)
+    c.JSON(http.StatusNotFound, gin.H{"error": "Book not found"})
 }
