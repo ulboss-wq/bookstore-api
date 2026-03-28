@@ -25,7 +25,7 @@ func GetBooks(c *gin.Context) {
         }
 
         temp := []models.Book{}
-        for _, b := range Books {
+        for _, b := range filtered {
             if b.CategoryID == catID {
                 temp = append(temp, b)
             }
@@ -33,7 +33,32 @@ func GetBooks(c *gin.Context) {
         filtered = temp
     }
 
-    c.JSON(http.StatusOK, filtered)
+    pageStr := c.DefaultQuery("page", "1") 
+    page, err := strconv.Atoi(pageStr)
+    if err != nil || page < 1 {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page"})
+        return
+    }
+
+    limit := 10 
+    start := (page - 1) * limit
+    end := start + limit
+    if start > len(filtered) {
+        start = len(filtered)
+    }
+    if end > len(filtered) {
+        end = len(filtered)
+    }
+
+    paged := filtered[start:end]
+
+    c.JSON(http.StatusOK, gin.H{
+        "page":       page,
+        "limit":      limit,
+        "total":      len(filtered),
+        "totalPages": (len(filtered) + limit - 1) / limit,
+        "books":      paged,
+    })
 }
 
 func CreateBook(c *gin.Context) {
